@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# User-space ChatGPT RPM installer. Keep this entry point small.
+# AtomicGPT: install and update ChatGPT from an RPM in user space.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 for module in common config cli version package processes desktop logging install; do

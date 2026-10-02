@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Shared logging and literal path handling (never evaluate configuration).
+ATOMICGPT_VERSION=2.0.0
 info() { printf '[INFO] %s\n' "$*"; }
 success() { printf '[ OK ] %s\n' "$*"; }
 warn() { printf '[WARN] %s\n' "$*" >&2; }
@@ -14,6 +15,8 @@ trim() {
 }
 expand_home() {
     local value="$1"
+    # Configuration contains a literal tilde; this function expands it.
+    # shellcheck disable=SC2088
     case "$value" in
         '~') value="$HOME" ;;
         '~/'*) value="$HOME/${value:2}" ;;
@@ -34,7 +37,7 @@ confirm() {
 }
 notify_user() {
     if command_exists notify-send; then
-        notify-send --app-name='ChatGPT updater' 'ChatGPT update' "$1" >/dev/null 2>&1 || true
+        notify-send --app-name=AtomicGPT 'ChatGPT update' "$1" >/dev/null 2>&1 || true
     fi
 }
 validate_target_path() {

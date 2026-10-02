@@ -6,11 +6,13 @@ begin_update_log() {
     require_command tee
     require_command date
     [[ ! -L "$directory" && ( ! -e "$directory" || -d "$directory" ) ]] || die 'The project logs path must be a directory, not a symlink.'
+    # SCRIPT_DIR already exists; only the logs directory needs this mode.
+    # shellcheck disable=SC2174
     mkdir -p -m 700 -- "$directory"
     timestamp="$(date '+%Y%m%dT%H%M%S%z')"
     UPDATE_LOG="$(mktemp --suffix=.log "$directory/update-$timestamp.XXXXXX")"
     {
-        printf 'ChatGPT installation/update attempt\n'
+        printf 'AtomicGPT installation/update attempt\n'
         printf 'Started at: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%:z')"
         printf 'Target: %s\nFrom version: %s\nTo version: %s\nForce: %s\n\n' \
             "$TARGET" "${OLD_EVR:-not installed}" "$NEW_EVR" "$FORCE"

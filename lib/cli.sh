@@ -3,6 +3,8 @@ usage() {
     cat <<'EOF'
 Usage: install-chatgpt.sh [OPTIONS]
 
+AtomicGPT - install and update ChatGPT in your own folder.
+
 Extract a ChatGPT RPM into ~/Programs/ChatGPT without changing the host OS.
 Only newer RPM versions are installed unless --force is supplied.
 
@@ -61,7 +63,7 @@ parse_args() {
             --no-integrate) INTEGRATE_DESKTOP=false; shift ;;
             --keep-backup) KEEP_BACKUP=true; shift ;;
             --help|-h) usage; exit 0 ;;
-            --version) printf 'chatgpt-rpm-installer 2.0.0\n'; exit 0 ;;
+            --version) printf 'AtomicGPT %s\n' "$ATOMICGPT_VERSION"; exit 0 ;;
             *) die "Unknown argument: $option (see --help)" ;;
         esac
     done

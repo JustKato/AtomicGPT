@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guided .env setup, using only Bash and the installer's existing utilities.
+# AtomicGPT guided setup, using Bash and the installer's existing utilities.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 for module in common config setup; do

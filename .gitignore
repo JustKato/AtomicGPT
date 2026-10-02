@@ -1,9 +1,16 @@
 .env
-.env.backup.*
+.env.*
+!.env.example
 *.rpm
 *.log
 __pycache__/
+.venv/
 /logs/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Local credentials and assistant settings.
+/.aws/
+/.codex/
+/.agents/

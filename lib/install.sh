@@ -52,7 +52,7 @@ install_application() {
 main() {
     local argument
     for argument in "$@"; do
-        case "$argument" in --help|-h) usage; return 0 ;; --version) printf 'chatgpt-rpm-installer 2.0.0\n'; return 0 ;; esac
+        case "$argument" in --help|-h) usage; return 0 ;; --version) printf 'AtomicGPT %s\n' "$ATOMICGPT_VERSION"; return 0 ;; esac
     done
     require_command realpath
     load_config "$@"

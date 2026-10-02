@@ -1,0 +1,31 @@
+name: Bug report
+description: Report an installation, configuration, or update problem.
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Your environment
+      description: Include your distribution, desktop environment, architecture, and AtomicGPT version.
+      placeholder: "Run ./install-chatgpt.sh --version to check the tool version."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the command you ran and whether you used a download or a local RPM.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Paste the relevant terminal output or update log. Remove tokens, private URLs, and personal information first.
+      render: text

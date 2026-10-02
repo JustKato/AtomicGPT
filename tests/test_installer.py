@@ -357,7 +357,7 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
 
     @property
     def update_dir(self):
-        return self.home / ".config/chatgpt-rpm-installer"
+        return self.home / ".config/atomicgpt"
 
     @property
     def unit_dir(self):
@@ -367,7 +367,7 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
         package = self.package()
         answers = f"{self.target}\nlocal\n{package}\ndaily\n10:30\nskip\nyes\nyes\n"
         self.wizard(("--no-config",), answers)
-        timer = self.unit_dir / "chatgpt-autoupdate.timer"
+        timer = self.unit_dir / "atomicgpt-autoupdate.timer"
         self.assertIn("OnCalendar=*-*-* 10:30:00", timer.read_text())
         self.assertIn("Persistent=true", timer.read_text())
         runner = self.update_dir / "run-update.sh"
@@ -380,7 +380,7 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
         unrelated.write_text("keep")
         self.wizard(("--remove",))
         self.assertFalse(timer.exists())
-        self.assertFalse((self.unit_dir / "chatgpt-autoupdate.service").exists())
+        self.assertFalse((self.unit_dir / "atomicgpt-autoupdate.service").exists())
         self.assertFalse(self.update_dir.exists())
         self.assertTrue(unrelated.exists())
         self.assertTrue(self.target.exists())
@@ -389,11 +389,53 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
     def test_wizard_weekly_close_and_reconfigure(self):
         answers = f"{self.target}\nlatest\nweekly\n23:30\nFri\nclose\nno\nyes\n"
         self.wizard(("--no-config",), answers)
-        self.assertIn("OnCalendar=Fri *-*-* 23:30:00", (self.unit_dir / "chatgpt-autoupdate.timer").read_text())
+        self.assertIn("OnCalendar=Fri *-*-* 23:30:00", (self.unit_dir / "atomicgpt-autoupdate.timer").read_text())
         self.assertIn("--yes", (self.update_dir / "run-update.sh").read_text())
         answers = f"{self.target}\nlatest\ndaily\n09:00\nskip\nno\nyes\n"
         self.wizard(("--no-config",), answers)
-        self.assertIn("OnCalendar=*-*-* 09:00:00", (self.unit_dir / "chatgpt-autoupdate.timer").read_text())
+        self.assertIn("OnCalendar=*-*-* 09:00:00", (self.unit_dir / "atomicgpt-autoupdate.timer").read_text())
+
+    def create_legacy_schedule(self):
+        self.wizard(("--no-config",), f"{self.target}\nlatest\ndaily\n09:00\nskip\nno\nyes\n")
+        legacy_dir = self.home / ".config/chatgpt-rpm-installer"
+        for path in [*self.unit_dir.iterdir(), *self.update_dir.iterdir()]:
+            text = path.read_text().replace("# Managed by AtomicGPT", "# Managed by ChatGPT RPM installer")
+            text = text.replace("atomicgpt-autoupdate", "chatgpt-autoupdate")
+            text = text.replace(str(self.update_dir), str(legacy_dir))
+            path.write_text(text)
+        self.update_dir.rename(legacy_dir)
+        for extension in ("service", "timer"):
+            (self.unit_dir / f"atomicgpt-autoupdate.{extension}").rename(
+                self.unit_dir / f"chatgpt-autoupdate.{extension}")
+        return legacy_dir
+
+    def test_legacy_schedule_is_reconfigured_without_a_second_timer(self):
+        legacy_dir = self.create_legacy_schedule()
+        self.assertIn("chatgpt-autoupdate", self.wizard(("--status",)))
+        self.wizard(("--no-config",), f"{self.target}\nlatest\ndaily\n12:00\nskip\nno\nyes\n")
+        timer = self.unit_dir / "chatgpt-autoupdate.timer"
+        self.assertIn("OnCalendar=*-*-* 12:00:00", timer.read_text())
+        self.assertIn("# Managed by AtomicGPT", timer.read_text())
+        self.assertTrue((legacy_dir / "update.env").exists())
+        self.assertFalse((self.unit_dir / "atomicgpt-autoupdate.timer").exists())
+        self.assertFalse(self.update_dir.exists())
+        self.wizard(("--remove",))
+        self.assertFalse(legacy_dir.exists())
+        self.assertFalse(timer.exists())
+
+    def test_legacy_schedule_removal_accepts_its_original_marker(self):
+        legacy_dir = self.create_legacy_schedule()
+        self.wizard(("--remove",))
+        self.assertFalse(legacy_dir.exists())
+        self.assertFalse((self.unit_dir / "chatgpt-autoupdate.timer").exists())
+        self.assertFalse((self.unit_dir / "chatgpt-autoupdate.service").exists())
+
+    def test_legacy_schedule_removal_preserves_unmanaged_files(self):
+        self.unit_dir.mkdir(parents=True)
+        legacy = self.unit_dir / "chatgpt-autoupdate.timer"
+        legacy.write_text("my own timer")
+        self.assertIn("unmanaged", self.wizard(("--remove",), code=1))
+        self.assertEqual(legacy.read_text(), "my own timer")
 
     def test_wizard_handles_special_path_characters_without_execution(self):
         self.target = self.home / 'Programs' / 'ChatGPT % $ " quote'
@@ -413,7 +455,7 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
 
     def test_wizard_refuses_unmanaged_files_and_missing_user_manager(self):
         self.unit_dir.mkdir(parents=True)
-        timer = self.unit_dir / "chatgpt-autoupdate.timer"
+        timer = self.unit_dir / "atomicgpt-autoupdate.timer"
         timer.write_text("user's own timer")
         self.assertIn("unmanaged", self.wizard(("--remove",), code=1))
         self.assertEqual(timer.read_text(), "user's own timer")
@@ -501,7 +543,7 @@ if os.environ.get("SYSTEMCTL_FAIL") and pathlib.Path(sys.argv[0]).name == "syste
         self.assertIn(f'INSTALL_DIR="{self.target}"', config)
         self.assertIn(f'RPM_PATH="{package}"', config)
         self.assertIn("INTEGRATE_DESKTOP=false", config)
-        self.assertIn("OnCalendar=*-*-* 10:30:00", (self.unit_dir / "chatgpt-autoupdate.timer").read_text())
+        self.assertIn("OnCalendar=*-*-* 10:30:00", (self.unit_dir / "atomicgpt-autoupdate.timer").read_text())
 
     def test_setup_retains_config_when_scheduler_is_unavailable(self):
         output = self.setup_wizard(f"{self.target}\n1\n2\n1\n2\n1\n1\n", code=1,

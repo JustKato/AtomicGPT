@@ -1,0 +1,37 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y rpm cpio shellcheck libglib2.0-bin desktop-file-utils
+      - name: Check shell syntax
+        run: |
+          for script in install-chatgpt.sh setup-wizard.sh autoupdate-wizard.sh lib/*.sh; do
+            bash -n "$script"
+          done
+      - name: Run ShellCheck
+        # The sourced modules share globals, so SC2034 cannot identify unused
+        # assignments by examining each file on its own.
+        run: shellcheck --severity=warning --exclude=SC2034 install-chatgpt.sh setup-wizard.sh autoupdate-wizard.sh lib/*.sh
+      - name: Run integration tests
+        run: python3 -m unittest discover -s tests -v

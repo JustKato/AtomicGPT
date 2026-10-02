@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-UNIT_NAME=chatgpt-autoupdate
-MANAGED_MARKER='# Managed by ChatGPT RPM installer'
+UNIT_NAME=atomicgpt-autoupdate
+MANAGED_MARKER='# Managed by AtomicGPT'
+LEGACY_MARKER='# Managed by ChatGPT RPM installer'
 
 wizard_usage() {
     cat <<'EOF'
 Usage: autoupdate-wizard.sh [--config FILE | --no-config] [--status | --remove]
+
+Manage AtomicGPT's automatic update schedule.
 
 No action option: ask questions and set up or replace a user systemd timer.
   --config FILE  Use an existing .env as defaults for the questions
@@ -19,14 +22,28 @@ EOF
 }
 scheduler_paths() {
     UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-    UPDATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/chatgpt-rpm-installer"
+    UNIT_NAME=atomicgpt-autoupdate
+    UPDATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/atomicgpt"
+    # Reuse an existing pre-rename schedule so it stays removable and we don't
+    # silently create a second timer. New setups use AtomicGPT names.
+    local legacy_dir="${XDG_CONFIG_HOME:-$HOME/.config}/chatgpt-rpm-installer"
+    if [[ ! -e "$UNIT_DIR/$UNIT_NAME.timer" && ! -e "$UNIT_DIR/$UNIT_NAME.service" && \
+        ! -e "$UPDATE_DIR/run-update.sh" && ! -e "$UPDATE_DIR/update.env" && \
+        ( -e "$UNIT_DIR/chatgpt-autoupdate.timer" || -e "$UNIT_DIR/chatgpt-autoupdate.service" || \
+          -e "$legacy_dir/run-update.sh" || -e "$legacy_dir/update.env" ) ]]; then
+        UNIT_NAME=chatgpt-autoupdate
+        UPDATE_DIR="$legacy_dir"
+    fi
     SERVICE_FILE="$UNIT_DIR/$UNIT_NAME.service"
     TIMER_FILE="$UNIT_DIR/$UNIT_NAME.timer"
     RUNNER_FILE="$UPDATE_DIR/run-update.sh"
     UPDATE_CONFIG="$UPDATE_DIR/update.env"
 }
 owned_file() {
-    [[ -f "$1" ]] && [[ "$(head -n 1 -- "$1")" == "$MANAGED_MARKER" ]]
+    local marker
+    [[ -f "$1" ]] || return 1
+    marker="$(head -n 1 -- "$1")"
+    [[ "$marker" == "$MANAGED_MARKER" || "$marker" == "$LEGACY_MARKER" ]]
 }
 guard_managed_files() {
     local file
@@ -108,7 +125,7 @@ write_schedule() {
     cat > "$temp" <<EOF
 $MANAGED_MARKER
 [Unit]
-Description=Update the user-space ChatGPT installation
+Description=AtomicGPT - update ChatGPT in user space
 
 [Service]
 Type=oneshot
@@ -121,7 +138,7 @@ EOF
     cat > "$temp" <<EOF
 $MANAGED_MARKER
 [Unit]
-Description=Check for ChatGPT updates on a schedule
+Description=AtomicGPT - check for ChatGPT updates
 
 [Timer]
 OnCalendar=$CALENDAR
