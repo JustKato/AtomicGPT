@@ -1,0 +1,9 @@
+.env
+.env.backup.*
+*.rpm
+*.log
+__pycache__/
+/logs/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
